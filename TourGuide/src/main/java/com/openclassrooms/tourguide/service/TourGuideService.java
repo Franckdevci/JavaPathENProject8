@@ -5,19 +5,21 @@ import com.openclassrooms.tourguide.tracker.Tracker;
 import com.openclassrooms.tourguide.user.User;
 import com.openclassrooms.tourguide.user.UserReward;
 
-import java.util.Comparator;
-import java.util.TreeMap;
-
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -35,6 +37,7 @@ import tripPricer.TripPricer;
 
 @Service
 public class TourGuideService {
+	private ExecutorService executorService = Executors.newFixedThreadPool(32);
 	private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
 	private final GpsUtil gpsUtil;
 	private final RewardsService rewardsService;
@@ -45,7 +48,7 @@ public class TourGuideService {
 	public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
 		this.gpsUtil = gpsUtil;
 		this.rewardsService = rewardsService;
-		
+
 		Locale.setDefault(Locale.US);
 
 		if (testMode) {
@@ -64,7 +67,7 @@ public class TourGuideService {
 
 	public VisitedLocation getUserLocation(User user) {
 		VisitedLocation visitedLocation = (user.getVisitedLocations().size() > 0) ? user.getLastVisitedLocation()
-				: trackUserLocation(user);
+				: trackUserLocation(user).join();
 		return visitedLocation;
 	}
 
@@ -91,11 +94,17 @@ public class TourGuideService {
 		return providers;
 	}
 
-	public VisitedLocation trackUserLocation(User user) {
-		VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-		user.addToVisitedLocations(visitedLocation);
-		rewardsService.calculateRewards(user);
-		return visitedLocation;
+	public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
+		// Exécution asynchrone de la récupération de la position
+		return CompletableFuture.supplyAsync(() -> {
+			VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
+			user.addToVisitedLocations(visitedLocation); // Ajout des données utilisateur
+			rewardsService.calculateRewards(user).join(); // Calcul des récompenses
+			return visitedLocation;
+		}, executorService).exceptionally(e -> {
+			logger.error("Error tracking user location", e);
+			return null;
+		});
 	}
 
 	// la méthode renvoie les 5 plus proches attractions
@@ -115,7 +124,7 @@ public class TourGuideService {
 	// la méthode renvoie une liste de maps contenant les informations des
 	// attractions
 	public List<Map<String, Object>> getCustomAttractionsDetails(List<Attraction> nearbyAttractions,
-																 VisitedLocation visitedLocation, User user) {
+			VisitedLocation visitedLocation, User user) {
 		List<Map<String, Object>> attractionsInfo = new ArrayList<>();
 
 		for (Attraction attraction : nearbyAttractions) {
