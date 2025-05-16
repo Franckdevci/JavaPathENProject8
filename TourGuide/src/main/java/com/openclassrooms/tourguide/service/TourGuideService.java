@@ -5,6 +5,9 @@ import com.openclassrooms.tourguide.tracker.Tracker;
 import com.openclassrooms.tourguide.user.User;
 import com.openclassrooms.tourguide.user.UserReward;
 
+import java.util.Comparator;
+import java.util.TreeMap;
+
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -95,15 +98,46 @@ public class TourGuideService {
 		return visitedLocation;
 	}
 
+	// la méthode renvoie les 5 plus proches attractions
 	public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-		List<Attraction> nearbyAttractions = new ArrayList<>();
-		for (Attraction attraction : gpsUtil.getAttractions()) {
-			if (rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location)) {
-				nearbyAttractions.add(attraction);
-			}
+		// Obtenir toutes les attractions
+		List<Attraction> allAttractions = gpsUtil.getAttractions();
+
+		// récuperer les 5 attractions les plus proches de l'utilisateur
+		// en les triant par distance
+		return allAttractions.stream()
+				.sorted(Comparator.comparingDouble(
+						attraction -> rewardsService.getDistance(visitedLocation.location, attraction)))
+				.limit(5) // Limiter à cinq attractions
+				.collect(Collectors.toList());
+	}
+
+	// la méthode renvoie une liste de maps contenant les informations des
+	// attractions
+	public List<Map<String, Object>> getCustomAttractionsDetails(List<Attraction> nearbyAttractions,
+																 VisitedLocation visitedLocation, User user) {
+		List<Map<String, Object>> attractionsInfo = new ArrayList<>();
+
+		for (Attraction attraction : nearbyAttractions) {
+			// Calculer la distance de l'utilisateur à l'attraction (en miles)
+			double distance = rewardsService.getDistance(visitedLocation.location, attraction);
+
+			// Récupérer les points de récompense pour l'attraction
+			int rewardPoints = rewardsService.getRewardPoints(attraction, user);
+
+			// Construire une map pour chaque attraction
+			Map<String, Object> attractionDetails = new TreeMap<>();
+			attractionDetails.put("attractionName", attraction.attractionName);
+			attractionDetails.put("latitude", attraction.latitude);
+			attractionDetails.put("longitude", attraction.longitude);
+			attractionDetails.put("distanceMiles", distance);
+			attractionDetails.put("rewardPoints", rewardPoints);
+
+			// Ajouter cette attraction à la liste
+			attractionsInfo.add(attractionDetails);
 		}
 
-		return nearbyAttractions;
+		return attractionsInfo;
 	}
 
 	private void addShutDownHook() {

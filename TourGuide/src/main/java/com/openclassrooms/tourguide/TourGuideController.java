@@ -1,8 +1,11 @@
 package com.openclassrooms.tourguide;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,12 +44,22 @@ public class TourGuideController {
         // The distance in miles between the user's location and each of the attractions.
         // The reward points for visiting each Attraction.
         //    Note: Attraction reward points can be gathered from RewardsCentral
-    @RequestMapping("/getNearbyAttractions") 
-    public List<Attraction> getNearbyAttractions(@RequestParam String userName) {
-    	VisitedLocation visitedLocation = tourGuideService.getUserLocation(getUser(userName));
-    	return tourGuideService.getNearByAttractions(visitedLocation);
+    @RequestMapping("/getNearbyAttractions")
+    public ResponseEntity<Map<String, Object>> getNearbyAttractions(@RequestParam String userName) {
+        // Récupérer la position de l'utilisateur
+        VisitedLocation visitedLocation = tourGuideService.getUserLocation(getUser(userName));
+        // Obtenir la liste des attractions proches
+        List<Attraction> nearbyAttractions = tourGuideService.getNearByAttractions(visitedLocation);
+        // Utiliser la méthode creer pour obtenir les infos des attractions
+        List<Map<String, Object>> attractionsInfo = tourGuideService.getCustomAttractionsDetails(nearbyAttractions,
+                visitedLocation, getUser(userName));
+        // Créer la réponse JSON avec la liste des attractions
+        Map<String, Object> response = new HashMap<>();
+        response.put("userLocation", visitedLocation.location);
+        response.put("attractions", attractionsInfo);
+        // Retourner la réponse sous forme de JSON
+        return ResponseEntity.ok(response);
     }
-    
     @RequestMapping("/getRewards") 
     public List<UserReward> getRewards(@RequestParam String userName) {
     	return tourGuideService.getUserRewards(getUser(userName));
