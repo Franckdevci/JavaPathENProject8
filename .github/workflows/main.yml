@@ -1,0 +1,66 @@
+name: CI Pipeline
+
+on:
+    push:
+        branches:
+            - dev
+            - master
+    pull_request:
+        branches:
+            - master
+            
+            
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        
+        steps:
+            - name: Checkout source code
+              uses: actions/checkout@v2
+            
+            - name: Set up JDK 17
+              uses: actions/setup-java@v2
+              with:
+                java-version: '17'
+                distribution: 'adopt'
+                
+                    
+            - name: Build vith Maven
+              working-directory: TourGuide
+              run: |
+                mvn install:install-file -Dfile=libs/gpsUtil.jar -DgroupId=gpsUtil -DartifactId=gpsUtil -Dversion=1.0.0 -Dpackaging=jar
+                mvn install:install-file -Dfile=libs/RewardCentral.jar -DgroupId=rewardCentral -DartifactId=rewardCentral -Dversion=1.0.0 -Dpackaging=jar
+                mvn install:install-file -Dfile=libs/TripPricer.jar -DgroupId=tripPricer -DartifactId=tripPricer -Dversion=1.0.0 -Dpackaging=jar
+                mvn clean package
+                
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: tourguide-jar
+                path: ./TourGuide/target/*.jar
+                
+            - name: Deploy locally
+              working-directory: TourGuide
+              run: |
+                java -jar target/tourguide-0.0.1-SNAPSHOT.jar &
+                sleep 30 # Wait for the application to start
+                curl -I http://localhost:8080 # Test if the application is running
+              
+    test:
+        runs-on: ubuntu-latest
+        needs: build
+        
+        steps:
+            - name: Checkout source code
+              uses: actions/checkout@v2
+            
+            - name: Set up JDK 17
+              uses: actions/setup-java@v2
+              with:
+                java-version: '17'
+                distribution: 'adopt'
+                
+                    
+            - name: Run tests with Maven
+              working-directory: TourGuide
+              run: mvn test
