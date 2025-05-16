@@ -50,23 +50,19 @@
 		<dependency>
 			<groupId>gpsUtil</groupId>
 			<artifactId>gpsUtil</artifactId>
-			<version>1</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/libs/gpsUtil.jar</systemPath>
+			<version>1.0.0</version>
 		</dependency>
+
 		<dependency>
 			<groupId>tripPricer</groupId>
 			<artifactId>tripPricer</artifactId>
-			<version>1</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/libs/TripPricer.jar</systemPath>
+			<version>1.0.0</version>
 		</dependency>
+
 		<dependency>
 			<groupId>rewardCentral</groupId>
 			<artifactId>rewardCentral</artifactId>
-			<version>1</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/libs/RewardCentral.jar</systemPath>
+			<version>1.0.0</version>
 		</dependency>
 	</dependencies>
 
@@ -77,6 +73,16 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 		</plugins>
+
+		<resources>
+			<resource>
+				<directory>${project.basedir}/libs</directory>
+				<includes>
+					<include>*.jar</include>
+				</includes>
+			</resource>
+		</resources>
+
 	</build>
 
 </project>
