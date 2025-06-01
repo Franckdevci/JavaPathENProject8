@@ -47,6 +47,7 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Custom external libraries -->
 		<dependency>
 			<groupId>gpsUtil</groupId>
 			<artifactId>gpsUtil</artifactId>
