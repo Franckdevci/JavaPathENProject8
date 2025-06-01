@@ -2,7 +2,6 @@ package com.openclassrooms.tourguide.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -11,6 +10,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -96,6 +99,24 @@ public class TourGuideService {
 		return visitedLocation;
 	}
 
+	private static final int MAX_THREADS = Runtime.getRuntime().availableProcessors() * 4;
+	private static final Semaphore semaphore = new Semaphore(MAX_THREADS);
+	private static final ExecutorService executor = Executors.newCachedThreadPool();
+
+	public CompletableFuture<VisitedLocation> trackUserLocationAsync(User user) {
+		return CompletableFuture.supplyAsync(() -> {
+			try {
+				semaphore.acquire();
+				return trackUserLocation(user);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				throw new RuntimeException("Thread interrompu", e);
+			} finally {
+				semaphore.release();
+			}
+		}, executor);
+	}
+
 	public List<NearbyAttractionDTO> getNearByAttractions(VisitedLocation visitedLocation) {
 		List<Attraction> Allattractions = gpsUtil.getAttractions();
 
@@ -132,9 +153,9 @@ public class TourGuideService {
 	}
 
 	/**********************************************************************************
-	 *
+	 * 
 	 * Methods Below: For Internal Testing
-	 *
+	 * 
 	 **********************************************************************************/
 	private static final String tripPricerApiKey = "test-server-api-key";
 	// Database connection will be used for external users, but for testing purposes
