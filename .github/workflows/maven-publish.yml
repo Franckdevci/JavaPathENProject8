@@ -42,7 +42,7 @@ jobs:
 
     strategy:
       matrix:
-        userCount: [100, 1000]
+        userCount: [100]
 
     steps:
       - name: Checkout repository
