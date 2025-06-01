@@ -1,80 +1,44 @@
-name: CI Pipeline
+name: Maven Package
 
 on:
-    push:
-        branches:
-            - dev
-            - master
-    pull_request:
-        branches:
-            - master
-            
-            
+  push:
+    branches: [ "master" ]
+  pull_request: 
+    branches: [ "master" ]
+
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build_test_package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: gpsUtil
+        run: mvn install:install-file -Dfile=TourGuide/libs/gpsUtil.jar -DgroupId=gpsUtil -DartifactId=gpsUtil -Dversion=1.0.0 -Dpackaging=jar
+
+      - name: RewardCentral
+        run: mvn install:install-file -Dfile=TourGuide/libs/RewardCentral.jar -DgroupId=rewardCentral -DartifactId=rewardCentral -Dversion=1.0.0 -Dpackaging=jar
+
+      - name: TripPricer
+        run: mvn install:install-file -Dfile=TourGuide/libs/TripPricer.jar -DgroupId=tripPricer -DartifactId=tripPricer -Dversion=1.0.0 -Dpackaging=jar
+
+      - name: Build
+        run: mvn clean compile --file TourGuide/pom.xml
         
-        steps:
-            - name: Checkout source code
-              uses: actions/checkout@v2
-            
-            - name: Set up JDK 17
-              uses: actions/setup-java@v2
-              with:
-                java-version: '17'
-                distribution: 'adopt'
-                
-            - name: Cache Maven packages
-              uses: actions/cache@v2
-              with:
-                path: ~/.m2/repository
-                key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-                restore-keys: |
-                    ${{ runner.os }}-maven-
-                        
-            - name: Build vith Maven
-              working-directory: TourGuide
-              run: |
-                mvn install:install-file -Dfile=libs/gpsUtil.jar -DgroupId=gpsUtil -DartifactId=gpsUtil -Dversion=1.0.0 -Dpackaging=jar
-                mvn install:install-file -Dfile=libs/RewardCentral.jar -DgroupId=rewardCentral -DartifactId=rewardCentral -Dversion=1.0.0 -Dpackaging=jar
-                mvn install:install-file -Dfile=libs/TripPricer.jar -DgroupId=tripPricer -DartifactId=tripPricer -Dversion=1.0.0 -Dpackaging=jar
-                mvn clean package
-                
-            - name: Upload artifact
-              uses: actions/upload-artifact@v4
-              with:
-                name: tourguide-jar
-                path: ./TourGuide/target/*.jar
-                
-            - name: Deploy locally
-              working-directory: TourGuide
-              run: |
-                java -jar target/tourguide-0.0.1-SNAPSHOT.jar &
-                sleep 30 # Wait for the application to start
-                curl -I http://localhost:8080 # Test if the application is running
-              
-    test:
-        runs-on: ubuntu-latest
-        needs: build
+      - name: Test
+        run: mvn test --file TourGuide/pom.xml
+
+      - name: Package
+        run: mvn package --file TourGuide/pom.xml
         
-        steps:
-            - name: Checkout source code
-              uses: actions/checkout@v2
-            
-            - name: Set up JDK 17
-              uses: actions/setup-java@v2
-              with:
-                java-version: '17'
-                distribution: 'adopt'
-                
-            - name: Cache Maven packages
-              uses: actions/cache@v2
-              with:
-                path: ~/.m2/repository
-                key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-                restore-keys: |
-                    ${{ runner.os }}-maven-
-                    
-            - name: Run tests with Maven
-              working-directory: TourGuide
-              run: mvn test
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3.1.3
+        with:
+          name: tour-guide
+          path: TourGuide/target/
