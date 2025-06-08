@@ -107,3 +107,12 @@ jobs:
         run: |
           cd TourGuide
           mvn clean package
+
+      - name: Move JAR to root directory
+        run: mv TourGuide/target/*.jar ./TourGuide.jar
+
+      - name: Upload artifact (JAR file)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TourGuide-jar
+          path: TourGuide.jar
