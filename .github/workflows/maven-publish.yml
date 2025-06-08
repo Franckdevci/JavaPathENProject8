@@ -75,7 +75,7 @@ jobs:
           mvn test
 
   deploy-job:
-    name: Deploy
+    name: Packaging
     runs-on: ubuntu-latest
     needs: test-job
     steps:
